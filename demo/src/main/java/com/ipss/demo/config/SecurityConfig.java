@@ -1,63 +1,73 @@
 package com.ipss.demo.config;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.context.annotation.*;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.stereotype.Component;
-
-import java.io.IOException;
 
 @Configuration
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity // habilita @PreAuthorize en controllers/services
 public class SecurityConfig {
 
     @Bean
-    BCryptPasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
-
-    @Bean
-    AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
-        return cfg.getAuthenticationManager();
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, RoleRedirectHandler successHandler) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            // La API no usa CSRF (solo vistas)
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/index", "/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
+                // público
+                .requestMatchers("/", "/index.html", "/login",
+                                 "/register", "/register.html",
+                                 "/css/**", "/js/**", "/images/**",
+                                 "/webjars/**", "/favicon.ico").permitAll()
+
+                // vistas por rol
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/comensal/**").hasRole("COMENSAL")
-                .requestMatchers("/cliente/**").hasRole("CLIENTE")
+                .requestMatchers("/comensal/**").hasAnyRole("COMENSAL","ADMIN")
+                .requestMatchers("/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+
+                // API por rol
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
+                .requestMatchers("/api/reservas/**").hasAnyRole("ADMIN","COMENSAL","CLIENTE")
+                .requestMatchers("/api/mesas/**").permitAll() // GET público
+
+                // lo demás, autenticado
                 .anyRequest().authenticated()
             )
-            .formLogin(form -> form
-                .loginPage("/login").permitAll()
-                .successHandler(successHandler) // redirige por rol
-            )
-            .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll())
-            .httpBasic(Customizer.withDefaults());
-        return http.build();
-    }
 
-    /** Handler que redirige según rol */
-    @Component
-    static class RoleRedirectHandler implements org.springframework.security.web.authentication.AuthenticationSuccessHandler {
-        @Override
-        public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res,
-                                            org.springframework.security.core.Authentication auth)
-                throws IOException, ServletException {
-            var roles = auth.getAuthorities().toString();
-            if (roles.contains("ROLE_ADMIN"))      res.sendRedirect("/admin");
-            else if (roles.contains("ROLE_COMENSAL")) res.sendRedirect("/comensal");
-            else                                     res.sendRedirect("/cliente");
-        }
+            .formLogin(f -> f
+                .loginPage("/login")
+                .successHandler((req, res, auth) -> {
+                    // redirección por rol
+                    var roles = auth.getAuthorities().toString();
+                    if (roles.contains("ROLE_ADMIN")) {
+                        res.sendRedirect("/admin");
+                    } else if (roles.contains("ROLE_COMENSAL")) {
+                        res.sendRedirect("/comensal");
+                    } else {
+                        res.sendRedirect("/cliente");
+                    }
+                })
+                .failureUrl("/login?error")
+                .permitAll()
+            )
+
+            .logout(l -> l
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout")
+                .permitAll()
+            );
+
+        return http.build();
     }
 }

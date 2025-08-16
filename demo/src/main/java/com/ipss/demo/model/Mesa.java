@@ -29,4 +29,5 @@ public class Mesa {
     public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
     public Boolean getFumadores() { return fumadores; }
     public void setFumadores(Boolean fumadores) { this.fumadores = fumadores; }
+    
 }

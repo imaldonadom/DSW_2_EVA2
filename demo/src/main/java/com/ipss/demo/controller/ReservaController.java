@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
 @RestController
 @RequestMapping("/api/reservas")
 public class ReservaController {
@@ -39,8 +41,9 @@ public class ReservaController {
     // Reservas del usuario autenticado
     @PreAuthorize("hasAnyRole('CLIENTE','ADMIN')")
     @GetMapping("/mias")
-    public ResponseEntity<?> misReservas() {
-        return ResponseEntity.ok(reservaService.misReservas());
+    public ResponseEntity<?> misReservas(Principal principal) {
+        String username = principal.getName(); // usuario autenticado
+        return ResponseEntity.ok(reservaService.misReservas(username));
     }
 
     // Cancelar una reserva

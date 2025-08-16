@@ -1,0 +1,4 @@
+username;password;role;enabled
+ana;1234;CLIENTE;true
+bruno;abcd;COMENSAL;true
+root;admin;ADMIN;true

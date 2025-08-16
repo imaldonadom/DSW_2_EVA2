@@ -14,4 +14,15 @@ public class RolePagesController {
 
     @GetMapping("/admin")
     public String admin() { return "admin"; }
+
+    @GetMapping("/admin/usuarios")
+    public String adminUsuarios() { return "admin-usuarios"; }
+
+    @GetMapping("/admin/mesas")
+    public String adminMesas() { return "admin-mesas"; }
+
+    @GetMapping("/admin/disponibilidad")
+    public String adminDisponibilidad() { return "admin-disponibilidad"; }
+
+    
 }
