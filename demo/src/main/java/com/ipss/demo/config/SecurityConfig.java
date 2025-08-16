@@ -1,84 +1,63 @@
 package com.ipss.demo.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.annotation.*;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.stereotype.Component;
 
-/**
- * Seguridad para API REST + HTML/JS estático (sin Thymeleaf).
- * - Vistas públicas: /, /index.html, /cliente.html y assets estáticos.
- * - Vista de administración: /admin.html (requiere ROLE_ADMIN).
- * - API Mesas:
- *     GET   /api/mesas/**        -> público
- *     POST/PUT/DELETE            -> ROLE_ADMIN
- * - Habilita @PreAuthorize en controladores (@EnableMethodSecurity).
- * - Autenticación básica (httpBasic). Si prefieres formLogin, avísame.
- */
+import java.io.IOException;
 
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    // ====== Usuarios en memoria (demo) ======
-    // admin / admin123  -> ROLE_ADMIN
-    // cliente / cliente123 -> ROLE_USER
     @Bean
-    public InMemoryUserDetailsManager userDetailsService(PasswordEncoder encoder) {
-        UserDetails admin = User.withUsername("admin")
-                .password(encoder.encode("admin123"))
-                .roles("ADMIN")
-                .build();
+    BCryptPasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
-        UserDetails cliente = User.withUsername("cliente")
-                .password(encoder.encode("cliente123"))
-                .roles("USER")
-                .build();
-
-        return new InMemoryUserDetailsManager(admin, cliente);
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
+        return cfg.getAuthenticationManager();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    // ====== Reglas de autorización por ruta y método ======
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, RoleRedirectHandler successHandler) throws Exception {
         http
-            // Para simplificar peticiones fetch desde HTML estático
             .csrf(csrf -> csrf.disable())
-
             .authorizeHttpRequests(auth -> auth
-                // Vistas y recursos públicos
-                .requestMatchers("/", "/index.html", "/cliente.html",
-                                 "/css/**", "/js/**", "/images/**", "/assets/**").permitAll()
-
-                // Vista admin solo para ROLE_ADMIN
-                .requestMatchers("/admin.html").hasRole("ADMIN")
-
-                // API Mesas: GET es público; mutaciones solo ADMIN
-                .requestMatchers(HttpMethod.GET, "/api/mesas/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/mesas/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/mesas/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/mesas/**").hasRole("ADMIN")
-
-                // Cualquier otra petición, autenticada
+                .requestMatchers("/", "/index", "/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/comensal/**").hasRole("COMENSAL")
+                .requestMatchers("/cliente/**").hasRole("CLIENTE")
                 .anyRequest().authenticated()
             )
-
-            // Autenticación básica; si prefieres formulario: .formLogin(Customizer.withDefaults())
+            .formLogin(form -> form
+                .loginPage("/login").permitAll()
+                .successHandler(successHandler) // redirige por rol
+            )
+            .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll())
             .httpBasic(Customizer.withDefaults());
-
         return http.build();
+    }
+
+    /** Handler que redirige según rol */
+    @Component
+    static class RoleRedirectHandler implements org.springframework.security.web.authentication.AuthenticationSuccessHandler {
+        @Override
+        public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res,
+                                            org.springframework.security.core.Authentication auth)
+                throws IOException, ServletException {
+            var roles = auth.getAuthorities().toString();
+            if (roles.contains("ROLE_ADMIN"))      res.sendRedirect("/admin");
+            else if (roles.contains("ROLE_COMENSAL")) res.sendRedirect("/comensal");
+            else                                     res.sendRedirect("/cliente");
+        }
     }
 }

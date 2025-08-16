@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cliente - Sabor Gourmet</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-3">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>Reservar mesa</h2>
+      <a class="btn btn-outline-secondary" th:href="@{/logout}">Salir</a>
+    </div>
+
+    <div class="row g-2 mb-3">
+      <div class="col-sm-4">
+        <input id="fecha" type="datetime-local" class="form-control">
+      </div>
+      <div class="col-sm-2">
+        <select id="duracion" class="form-select">
+          <option value="60">1 hora</option>
+          <option value="120">2 horas</option>
+          <option value="180">3 horas</option>
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <button class="btn btn-primary" onclick="cargarDisponibles()">Buscar disponibles</button>
+      </div>
+    </div>
+
+    <table class="table table-sm">
+      <thead><tr><th>Mesa</th><th>Capacidad</th><th>Ubicación</th><th></th></tr></thead>
+      <tbody id="tbodyMesas"></tbody>
+    </table>
+
+    <h4 class="mt-4">Mis reservas</h4>
+    <table class="table table-sm">
+      <thead><tr><th>#</th><th>Mesa</th><th>Inicio</th><th>Fin</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="tbodyMisReservas"></tbody>
+    </table>
+  </div>
+
+  <!-- Modal Confirmar Reserva -->
+  <div class="modal fade" id="modalReserva" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Confirmar reserva</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><p id="textoReserva"></p></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" id="btnConfirmarReserva">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmar Anulación -->
+  <div class="modal fade" id="modalCancelar" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Anular reserva</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body"><p id="textoCancelar"></p></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button class="btn btn-danger" id="btnConfirmarCancelacion">Anular</button>
+      </div>
+    </div></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const api = {
+      mesasDisp: (ini, dur) => fetch(`/api/disponibilidad?inicio=${encodeURIComponent(ini)}&min=${dur}`).then(r=>r.json()),
+      misReservas: () => fetch('/api/reservas/mias').then(r=>r.json()),
+      crearReserva: (mesaId, ini, dur) => fetch('/api/reservas', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({mesaId, inicio: ini, minutos: parseInt(dur,10)}) }),
+      cancelar: (id) => fetch(`/api/reservas/${id}`, {method:'DELETE'})
+    };
+
+    async function cargarDisponibles() {
+      const ini = document.getElementById('fecha').value;
+      const dur = document.getElementById('duracion').value;
+      if(!ini) { alert('Selecciona fecha/hora'); return; }
+      const data = await api.mesasDisp(ini, dur);
+      const tb = document.getElementById('tbodyMesas'); tb.innerHTML='';
+      data.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.numero}</td><td>${m.capacidad}</td><td>${m.ubicacion||''}</td>
+                        <td><button class="btn btn-sm btn-primary">Reservar</button></td>`;
+        tr.querySelector('button').onclick = () => abrirModalReserva(m.id, m.numero, ini, dur);
+        tb.appendChild(tr);
+      });
+    }
+
+    function abrirModalReserva(mesaId, numero, ini, dur) {
+      document.getElementById('textoReserva').textContent =
+        `¿Confirmas reservar la mesa ${numero} desde ${ini} por ${dur/60}h?`;
+      const btn = document.getElementById('btnConfirmarReserva');
+      btn.onclick = async () => { await api.crearReserva(mesaId, ini, dur); cargarDisponibles(); cargarMisReservas(); };
+      new bootstrap.Modal('#modalReserva').show();
+    }
+
+    async function cargarMisReservas() {
+      const data = await api.misReservas();
+      const tb = document.getElementById('tbodyMisReservas'); tb.innerHTML='';
+      data.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.id}</td><td>${r.mesaNumero}</td><td>${r.inicio}</td><td>${r.fin}</td><td>${r.estado}</td>
+                        <td><button class="btn btn-sm btn-outline-danger">Anular</button></td>`;
+        tr.querySelector('button').onclick = () => abrirModalCancelar(r.id);
+        tb.appendChild(tr);
+      });
+    }
+
+    function abrirModalCancelar(id) {
+      document.getElementById('textoCancelar').textContent = `¿Anulas la reserva #${id}?`;
+      const btn = document.getElementById('btnConfirmarCancelacion');
+      btn.onclick = async () => { await api.cancelar(id); cargarMisReservas(); };
+      new bootstrap.Modal('#modalCancelar').show();
+    }
+
+    // inicial
+    cargarMisReservas();
+  </script>
+</body>
+</html>

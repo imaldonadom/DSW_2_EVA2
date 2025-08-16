@@ -1,96 +1,13 @@
-<!doctype html><meta http-equiv="refresh" content="0; url=/cliente.html">
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Reservas - Mesas</title>
-  <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 2rem; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ddd; padding: .6rem; }
-    th { background: #f5f5f5; text-align: left; }
-    .row { display: grid; gap: .5rem; grid-template-columns: repeat(4, 1fr); }
-    input, select, button { padding: .5rem; }
-    .actions { display: flex; gap: .5rem; }
-  </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Inicio</title>
 </head>
 <body>
-  <h1>Mesas</h1>
-
-  <div class="row">
-    <input id="numero" type="number" min="1" placeholder="Número" />
-    <input id="capacidad" type="number" min="1" placeholder="Capacidad" />
-    <input id="ubicacion" type="text" placeholder="Ubicación (Interior/Terraza)" />
-    <select id="fumadores">
-      <option value="false">No fumadores</option>
-      <option value="true">Fumadores</option>
-    </select>
-  </div>
-  <p><button id="btnAdd">Agregar mesa</button></p>
-
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th><th>Número</th><th>Capacidad</th><th>Ubicación</th><th>Fumadores</th><th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
-
-  <script>
-    const API = '/api/mesas';
-
-    const $ = (id) => document.getElementById(id);
-    const tbody = $('tbody');
-
-    async function cargar() {
-      const res = await fetch(API);
-      const data = await res.json();
-      tbody.innerHTML = data.map(m => `
-        <tr>
-          <td>${m.id}</td>
-          <td>${m.numero}</td>
-          <td>${m.capacidad}</td>
-          <td>${m.ubicacion ?? ''}</td>
-          <td>${m.fumadores ? 'Sí' : 'No'}</td>
-          <td class="actions">
-            <button onclick="borrar(${m.id})">Borrar</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    async function agregar() {
-      const body = {
-        numero: parseInt($('numero').value, 10),
-        capacidad: parseInt($('capacidad').value, 10),
-        ubicacion: $('ubicacion').value || null,
-        fumadores: $('fumadores').value === 'true'
-      };
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        alert('Error al crear mesa (revisa número/capacidad).');
-        return;
-      }
-      $('numero').value = '';
-      $('capacidad').value = '';
-      $('ubicacion').value = '';
-      $('fumadores').value = 'false';
-      cargar();
-    }
-
-    async function borrar(id) {
-      if (!confirm('¿Eliminar mesa?')) return;
-      await fetch(`${API}/${id}`, { method: 'DELETE' });
-      cargar();
-    }
-
-    $('btnAdd').addEventListener('click', agregar);
-    cargar();
-  </script>
+  <h1>Inicio</h1>
+  <p><a href="/cliente.html">Cliente</a></p>
+  <p><a href="/admin.html">Admin</a> (usuario: <b>admin</b> / clave: <b>admin123</b>)</p>
 </body>
 </html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin - Sabor Gourmet</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-3">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>Administración</h2>
+      <a class="btn btn-outline-secondary" th:href="@{/logout}">Salir</a>
+    </div>
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="card"><div class="card-body">
+          <h5>Mantenedor de usuarios</h5>
+          <p class="text-muted">Crear usuarios y asignar roles.</p>
+          <!-- Conecta aquí tus endpoints /api/usuarios -->
+        </div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card"><div class="card-body">
+          <h5>Mesas</h5>
+          <p class="text-muted">Alta/Baja/Edición de mesas.</p>
+          <!-- Conecta a /api/mesas (POST/PUT/DELETE) -->
+        </div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card"><div class="card-body">
+          <h5>Disponibilidad</h5>
+          <p class="text-muted">Configurar horarios disponibles.</p>
+          <!-- Conecta a /api/disponibilidad/** -->
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="card mt-3">
+  <div class="card-body">
+    <h5>Horario de atención</h5>
+    <div class="row g-2 align-items-end">
+      <div class="col-sm-3">
+        <label class="form-label">Apertura</label>
+        <input id="apertura" type="time" class="form-control" value="12:00">
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label">Cierre</label>
+        <input id="cierre" type="time" class="form-control" value="23:00">
+      </div>
+      <div class="col-sm-3">
+        <button class="btn btn-primary" onclick="guardarHorario()">Guardar</button>
+      </div>
+    </div>
+    <div id="msgHorario" class="mt-2 text-success" style="display:none;">Horario actualizado</div>
+  </div>
+</div>
+
+<script>
+async function loadHorario(){
+  const r = await fetch('/api/config/horario');
+  if(r.ok){
+    const j = await r.json();
+    document.getElementById('apertura').value = j.apertura.substring(0,5);
+    document.getElementById('cierre').value   = j.cierre.substring(0,5);
+  }
+}
+async function guardarHorario(){
+  const body = {
+    apertura: document.getElementById('apertura').value + ':00',
+    cierre:   document.getElementById('cierre').value   + ':00'
+  };
+  const r = await fetch('/api/config/horario', {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  document.getElementById('msgHorario').style.display = r.ok ? 'block' : 'none';
+}
+loadHorario();
+</script>
+
+
+
+</body>
+</html>
