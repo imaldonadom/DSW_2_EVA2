@@ -33,7 +33,7 @@ public class MesaService {
                     actual.setNumero(m.getNumero());
                     actual.setCapacidad(m.getCapacidad());
                     actual.setUbicacion(m.getUbicacion());
-                    actual.setFumadores(m.getFumadores());
+                   actual.setFumadores(m.isFumadores());
                     return repo.save(actual);
                 })
                 .orElse(null);
