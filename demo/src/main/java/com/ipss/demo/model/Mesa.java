@@ -25,3 +25,4 @@ public class Mesa {
     public boolean isFumadores() { return fumadores; }
     public void setFumadores(boolean fumadores) { this.fumadores = fumadores; }
 }
+

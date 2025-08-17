@@ -5,8 +5,6 @@ import com.ipss.demo.model.Mesa;
 import com.ipss.demo.model.Reserva;
 import com.ipss.demo.repository.MesaRepository;
 import com.ipss.demo.repository.ReservaRepository;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,59 +22,61 @@ public class ReservaService {
         this.mesaRepo = mesaRepo;
     }
 
-    // --- Crear reserva ---
+    public Reserva findById(Long id) {
+        return reservaRepo.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Reserva no encontrada: " + id));
+    }
+
+    public List<Reserva> listarPorMesaYFechas(Integer mesaId, LocalDateTime desde, LocalDateTime hasta) {
+        List<Reserva> out = reservaRepo.findByMesaIdAndInicioBetween(mesaId, desde, hasta);
+        out.sort(Comparator.comparing(Reserva::getInicio));
+        return out;
+    }
+
+    public boolean existeSolape(Integer mesaId, LocalDateTime inicio, LocalDateTime fin) {
+        return reservaRepo.existsByMesaIdAndInicioLessThanAndFinGreaterThan(mesaId, fin, inicio);
+    }
+
+    // ---------- métodos usados por tus controladores ----------
+
     public Reserva crear(CrearReservaDTO dto) {
         Mesa mesa = mesaRepo.findById(dto.getMesaId())
-                .orElseThrow(() -> new IllegalArgumentException("Mesa no existe: " + dto.getMesaId()));
-
-        LocalDateTime inicio = dto.getInicio();
-        LocalDateTime fin = inicio.plusMinutes(dto.getMinutos());
-
-        // regla básica: no traslapes en la misma mesa
-        boolean solapa = reservaRepo.existsByMesaIdAndInicioLessThanAndFinGreaterThan(
-                mesa.getId(), fin, inicio
-        );
-        if (solapa) {
-            throw new IllegalArgumentException("La mesa ya está reservada en ese rango.");
-        }
-
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = (auth != null) ? auth.getName() : "anon";
+            .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada: " + dto.getMesaId()));
 
         Reserva r = new Reserva();
         r.setMesa(mesa);
-        r.setInicio(inicio);
-        r.setFin(fin);
-        r.setEstado("ACTIVA");
-        r.setUsername(username);
+        r.setInicio(dto.getInicio());
 
+        // Tu DTO no tiene getFin(): asumimos bloque de 1 hora
+        LocalDateTime fin = dto.getInicio().plusHours(1);
+        r.setFin(fin);
+
+        // Tu DTO no tiene getUsername(): dejamos un valor genérico
+        if (r.getUsername() == null || r.getUsername().isBlank()) {
+            r.setUsername("cliente");
+        }
+
+        r.setEstado(Reserva.Estado.PENDIENTE);
         return reservaRepo.save(r);
     }
 
-    // --- Historico del usuario autenticado ---
     public List<Reserva> misReservas(String username) {
         return reservaRepo.findByUsernameOrderByInicioDesc(username);
     }
 
-    // (opcional, si lo usabas antes)
-    public List<Reserva> misReservas() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = (auth != null) ? auth.getName() : "anon";
-        return misReservas(username);
-    }
-
-    // --- Cancelar ---
     public void cancelar(Long id) {
-        Reserva r = reservaRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Reserva no existe: " + id));
-        r.setEstado("CANCELADA");
+        Reserva r = findById(id);
+        r.setEstado(Reserva.Estado.CANCELADA);
         reservaRepo.save(r);
     }
 
-    // --- Listado completo (para comensal/admin) ---
+    // Tu controlador llama listarTodas(): la exponemos con ese nombre.
     public List<Reserva> listarTodas() {
-        List<Reserva> all = reservaRepo.findAll();
-        all.sort(Comparator.comparing(Reserva::getInicio).reversed());
-        return all;
+        return reservaRepo.findAll();
+    }
+
+    // (Alias opcional por si en otro lado usaste listarTodos)
+    public List<Reserva> listarTodos() {
+        return listarTodas();
     }
 }

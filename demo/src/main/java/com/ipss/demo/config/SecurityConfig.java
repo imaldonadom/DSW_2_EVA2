@@ -2,14 +2,15 @@ package com.ipss.demo.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 @Configuration
-@EnableMethodSecurity // habilita @PreAuthorize en controllers/services
 public class SecurityConfig {
 
     @Bean
@@ -18,53 +19,53 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public AuthenticationSuccessHandler roleBasedSuccessHandler() {
+        return (req, res, auth) -> {
+            var roles = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
+            String target = "/";
+            if (roles.contains("ROLE_ADMIN")) target = "/admin";
+            else if (roles.contains("ROLE_CLIENTE")) target = "/cliente";
+            else if (roles.contains("ROLE_COMENSAL")) target = "/comensal";
+            res.sendRedirect(target);
+        };
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           AuthenticationSuccessHandler successHandler) throws Exception {
         http
-            // La API no usa CSRF (solo vistas)
+            .cors(c -> {})
+            // Si tu API usa cookies/sesión, quita esta línea
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
 
             .authorizeHttpRequests(auth -> auth
-                // público
-                .requestMatchers("/", "/index.html", "/login",
-                                 "/register", "/register.html",
-                                 "/css/**", "/js/**", "/images/**",
-                                 "/webjars/**", "/favicon.ico").permitAll()
+                .requestMatchers("/", "/index", "/login", "/css/**", "/js/**", "/images/**", "/public/**").permitAll()
 
-                // vistas por rol
+                .requestMatchers(HttpMethod.GET, "/api/mesas/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/mesas/**").hasAnyRole("ADMIN","CLIENTE")
+                .requestMatchers(HttpMethod.PUT, "/api/mesas/**").hasAnyRole("ADMIN","CLIENTE")
+                .requestMatchers(HttpMethod.PATCH, "/api/mesas/**").hasAnyRole("ADMIN","CLIENTE")
+                .requestMatchers(HttpMethod.DELETE, "/api/mesas/**").hasRole("ADMIN")
+
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/comensal/**").hasAnyRole("COMENSAL","ADMIN")
-                .requestMatchers("/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+                .requestMatchers("/cliente/**").hasRole("CLIENTE")
+                .requestMatchers("/comensal/**").hasRole("COMENSAL")
 
-                // API por rol
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
-                .requestMatchers("/api/reservas/**").hasAnyRole("ADMIN","COMENSAL","CLIENTE")
-                .requestMatchers("/api/mesas/**").permitAll() // GET público
-
-                // lo demás, autenticado
                 .anyRequest().authenticated()
             )
 
             .formLogin(f -> f
                 .loginPage("/login")
-                .successHandler((req, res, auth) -> {
-                    // redirección por rol
-                    var roles = auth.getAuthorities().toString();
-                    if (roles.contains("ROLE_ADMIN")) {
-                        res.sendRedirect("/admin");
-                    } else if (roles.contains("ROLE_COMENSAL")) {
-                        res.sendRedirect("/comensal");
-                    } else {
-                        res.sendRedirect("/cliente");
-                    }
-                })
-                .failureUrl("/login?error")
                 .permitAll()
+                .successHandler(successHandler)
             )
 
             .logout(l -> l
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout")
+                .invalidateHttpSession(true)
+                .clearAuthentication(true)
+                .deleteCookies("JSESSIONID")
                 .permitAll()
             );
 

@@ -1,67 +1,60 @@
 package com.ipss.demo.controller;
 
-import com.ipss.demo.dto.CrearReservaDTO;
 import com.ipss.demo.model.Reserva;
-import com.ipss.demo.service.ReservaRules;
 import com.ipss.demo.service.ReservaService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
+import java.time.LocalDateTime;
+import java.util.List;
 
-@RestController
-@RequestMapping("/api/reservas")
+@Controller
+@RequestMapping("/reserva")
 public class ReservaController {
 
     private final ReservaService reservaService;
-    private final ReservaRules reservaRules;
 
-    public ReservaController(ReservaService reservaService, ReservaRules reservaRules) {
+    public ReservaController(ReservaService reservaService) {
         this.reservaService = reservaService;
-        this.reservaRules = reservaRules;
     }
 
-    // Crear reserva (CLIENTE o ADMIN)
-    @PreAuthorize("hasAnyRole('CLIENTE','ADMIN')")
-    @PostMapping
-    public ResponseEntity<?> crear(@RequestBody CrearReservaDTO dto) {
-        try {
-            // Valida horario laboral configurable
-            reservaRules.validarHorario(dto.getInicio(), dto.getMinutos());
-
-            // Lógica de creación (delegada al service)
-            Reserva r = reservaService.crear(dto);
-            return ResponseEntity.ok(r);
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        }
+    // Lista general
+    @GetMapping("/todas")
+    public String listarTodas(Model model) {
+        List<Reserva> items = reservaService.listarTodas();
+        model.addAttribute("items", items);
+        return "reserva-lista";
     }
 
-    // Reservas del usuario autenticado
-    @PreAuthorize("hasAnyRole('CLIENTE','ADMIN')")
-    @GetMapping("/mias")
-    public ResponseEntity<?> misReservas(Principal principal) {
-        String username = principal.getName(); // usuario autenticado
-        return ResponseEntity.ok(reservaService.misReservas(username));
+    // Cancelación genérica
+    @PostMapping("/cancelar/{id}")
+    public String cancelar(@PathVariable Long id) {
+        reservaService.cancelar(id);
+        return "redirect:/reserva/todas";
     }
 
-    // Cancelar una reserva
-    @PreAuthorize("hasAnyRole('CLIENTE','ADMIN')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> cancelar(@PathVariable Long id) {
-        try {
-            reservaService.cancelar(id);
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        }
+    // Filtro por mesa y rango de fechas
+    @GetMapping("/mesa/{mesaId}")
+    public String porMesaYRango(@PathVariable Integer mesaId,
+                                @RequestParam String desde,
+                                @RequestParam String hasta,
+                                Model model) {
+        LocalDateTime d = LocalDateTime.parse(desde);
+        LocalDateTime h = LocalDateTime.parse(hasta);
+        List<Reserva> items = reservaService.listarPorMesaYFechas(mesaId, d, h);
+        model.addAttribute("items", items);
+        return "reserva-lista";
     }
 
-    // Listado completo (para COMENSAL/ADMIN)
-    @PreAuthorize("hasAnyRole('COMENSAL','ADMIN')")
-    @GetMapping
-    public ResponseEntity<?> listarTodas() {
-        return ResponseEntity.ok(reservaService.listarTodas());
+    // Comprobación de solape
+    @GetMapping("/existe-solape")
+    @ResponseBody
+    public boolean existeSolape(@RequestParam Integer mesaId,
+                                @RequestParam String inicio,
+                                @RequestParam String fin) {
+        LocalDateTime i = LocalDateTime.parse(inicio);
+        LocalDateTime f = LocalDateTime.parse(fin);
+        return reservaService.existeSolape(mesaId, i, f);
     }
 }

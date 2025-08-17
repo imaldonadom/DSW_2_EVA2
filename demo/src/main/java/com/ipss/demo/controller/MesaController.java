@@ -1,26 +1,25 @@
-// Ruta: src/main/java/com/ipss/demo/controller/MesaController.java
 package com.ipss.demo.controller;
 
-import com.ipss.demo.model.Mesa;
-import com.ipss.demo.service.MesaService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/mesas")
+@Controller
+@RequestMapping("/mesas")
 public class MesaController {
 
-    private final MesaService service;
-
-    public MesaController(MesaService service) {
-        this.service = service;
-    }
-
+    // Vista lista de mesas (HTML)
     @GetMapping
-    public List<Mesa> listar() {
-        return service.listar();
+    public String listar(Model model) {
+        model.addAttribute("titulo", "Listado de Mesas");
+        return "mesas/lista"; // src/main/resources/templates/mesas/lista.html o /static/mesas/lista.html
     }
 
-    // (Opcional) otros GET públicos… pero nada de POST/PUT/DELETE aquí
+    // Vista detalle de una mesa (HTML)
+    @GetMapping("/{id}")
+    public String detalle(@PathVariable Integer id, Model model) {
+        model.addAttribute("titulo", "Detalle Mesa " + id);
+        model.addAttribute("id", id);
+        return "mesas/detalle"; // templates/mesas/detalle.html
+    }
 }

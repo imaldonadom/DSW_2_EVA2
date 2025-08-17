@@ -11,35 +11,20 @@ public class MesaService {
 
     private final MesaRepository repo;
 
-    public MesaService(MesaRepository repo) {
-        this.repo = repo;
-    }
+    public MesaService(MesaRepository repo) { this.repo = repo; }
 
     public List<Mesa> listar() {
-        return repo.findAll();
+        return repo.findAll(); // JpaRepository -> List<Mesa>
     }
 
-    public Mesa buscar(Integer id) {
-        return repo.findById(id).orElse(null);
-    }
-
-    public Mesa crear(Mesa m) {
-        return repo.save(m);
-    }
-
-    public Mesa actualizar(Integer id, Mesa m) {
+    public Mesa findById(Integer id) {
         return repo.findById(id)
-                .map(actual -> {
-                    actual.setNumero(m.getNumero());
-                    actual.setCapacidad(m.getCapacidad());
-                    actual.setUbicacion(m.getUbicacion());
-                   actual.setFumadores(m.isFumadores());
-                    return repo.save(actual);
-                })
-                .orElse(null);
+                .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada: " + id));
     }
 
-    public void eliminar(Integer id) {
-        repo.deleteById(id);
-    }
+    public Mesa guardar(Mesa mesa) { return repo.save(mesa); }
+
+    public void eliminar(Integer id) { repo.deleteById(id); }
+
+    public boolean existsById(Integer id) { return repo.existsById(id); }
 }

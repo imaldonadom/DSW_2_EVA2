@@ -1,21 +1,16 @@
 package com.ipss.demo.repository;
 
 import com.ipss.demo.model.Reserva;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
-    // Para detectar solapamiento en la misma mesa
-    boolean existsByMesaIdAndInicioLessThanAndFinGreaterThan(
-            Integer mesaId, LocalDateTime finNuevo, LocalDateTime inicioNuevo
-    );
-
-    // Historial de un usuario (mismas que usas en misReservas)
-    List<Reserva> findByUsernameOrderByInicioDesc(String username);
-
-    // Consulta por rango y mesa (si la usas para disponibilidad)
+    // Los controladores te pasan mesaId como Integer
     List<Reserva> findByMesaIdAndInicioBetween(Integer mesaId, LocalDateTime desde, LocalDateTime hasta);
+
+    boolean existsByMesaIdAndInicioLessThanAndFinGreaterThan(Integer mesaId, LocalDateTime nuevoFin, LocalDateTime nuevoInicio);
+
+    List<Reserva> findByUsernameOrderByInicioDesc(String username);
 }

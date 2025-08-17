@@ -1,0 +1,49 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Comensal - Disponibilidad</title>
+  <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet"/>
+</head>
+<body class="container py-4">
+
+<h2>Disponibilidad de mesas</h2>
+
+<form class="row g-2 mb-3" method="get" th:action="@{/comensal}">
+  <div class="col-auto">
+    <input class="form-control" type="date" name="fecha"
+           th:value="${#temporals.format(fecha,'yyyy-MM-dd')}">
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-primary" type="submit">Buscar</button>
+  </div>
+</form>
+
+<table class="table table-sm table-hover align-middle">
+  <thead>
+  <tr>
+    <th>Mesa</th>
+    <th>Capacidad</th>
+    <th>Ubicación</th>
+    <th>Día</th>
+    <th>Apertura</th>
+    <th>Cierre</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr th:each="d : ${disponibles}">
+    <td th:text="${d.mesa != null ? ('Mesa ' + d.mesa.id) : '—'}">Mesa</td>
+    <td th:text="${d.mesa != null ? d.mesa.capacidad : '-'}">4</td>
+    <td th:text="${d.mesa != null ? d.mesa.ubicacion : '-'}">Salón</td>
+    <td th:text="${#temporals.format(d.fecha,'dd-MM-yyyy')}">01-01-2025</td>
+    <td th:text="${#temporals.format(d.apertura,'HH:mm')}">19:00</td>
+    <td th:text="${#temporals.format(d.cierre,'HH:mm')}">21:00</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(disponibles)}">
+    <td colspan="6" class="text-muted">No hay disponibilidad para la fecha seleccionada.</td>
+  </tr>
+  </tbody>
+</table>
+
+</body>
+</html>

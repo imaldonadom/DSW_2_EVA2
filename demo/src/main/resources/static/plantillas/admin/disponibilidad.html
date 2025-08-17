@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Usuario Comensal · Reservar Mesa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --teal:#0f4c5c;
+      --teal-dark:#0b3945;
+      --teal-mid:#134f61;
+      --line:#dbe0e6;
+      --row:#eef1f4;
+    }
+    body{background:#ffffff; color:#0b3a44}
+    .wrap{max-width:1200px;margin:22px auto}
+
+    /* TITULO */
+    .h-title{font-size:28px;font-weight:800;margin-bottom:6px}
+    .h-sub{font-size:22px;font-weight:700;margin-bottom:18px}
+
+    /* BOTONES GRANDES SUPERIORES (estilo mockup) */
+    .panel-btn{
+      position:relative;border:3px solid var(--teal); background:#134f61; color:#fff;
+      font-weight:800; text-align:center; padding:16px 10px; border-radius:0; width:100%;
+      letter-spacing:.3px;
+    }
+    .panel-btn .tri{
+      position:absolute; right:10px; top:10px; width:0; height:0;
+      border-left:18px solid #ffb366; border-top:18px solid transparent; border-bottom:18px solid transparent;
+      box-shadow:0 0 0 3px #fff inset;
+    }
+
+    /* BLOQUES “Calendario / Reloj” */
+    .panel-solid{
+      border:3px solid var(--teal); background:#134f61; color:#fff;
+      font-weight:800; text-align:center; padding:28px 10px; letter-spacing:.3px;
+    }
+
+    /* SELECCIONE MESA (lado derecho) */
+    .panel-right .chip{
+      border:3px solid var(--teal); background:#134f61; color:#fff; font-weight:700;
+      text-align:center; padding:10px; margin-top:10px;
+    }
+    .panel-right small{display:block; color:#d7eef6; font-weight:600}
+
+    /* TABLA MATRIZ */
+    .board{margin-top:18px}
+    .board .table{margin:0; border:2px solid var(--teal)}
+    .board thead th{
+      background:var(--teal); color:#fff; font-weight:800; border-right:2px solid #0e3f4c;
+      vertical-align:middle; text-align:left; padding:10px 12px;
+    }
+    .board th:first-child{width:190px}
+    .board tbody td{border-right:1px solid var(--line); vertical-align:middle; padding:10px 12px}
+    .board tbody tr:nth-child(odd){background:#f1f3f6}
+    .board tbody tr:nth-child(even){background:#e9edf1}
+
+    /* ESTADOS (colores del mockup) */
+    .estado{font-weight:700}
+    .estado.disp{color:#22a851}       /* verde */
+    .estado.resv{color:#c23a2b}       /* rojo */
+    .estado.mod{color:#d98324}        /* naranjo */
+    .estado.canc{color:#e32c2c}       /* rojo fuerte */
+
+    .btn-accion{
+      border:2px solid #d2d51f; background:#f3ff33; color:#164048; font-weight:900;
+      padding:.15rem .45rem; line-height:1; box-shadow:none; font-size:.9rem;
+    }
+
+    /* Inputs reales pero discretos debajo de los paneles */
+    .real-input{margin-top:8px}
+    .real-input input, .real-input select{border:1px solid var(--line)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="h-title">Usuario Comensal</div>
+    <div class="h-sub">Reservar Mesa</div>
+
+    <!-- FILA DE PANEL SUPERIOR -->
+    <div class="row g-4 mb-2">
+      <div class="col-lg-4 col-md-6">
+        <div class="panel-btn">Seleccione Fecha <span class="tri"></span></div>
+        <div class="panel-solid mt-2">Calendario</div>
+        <div class="real-input">
+          <input id="fechaInput" type="date" class="form-control">
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="panel-btn">Seleccione Hora <span class="tri"></span></div>
+        <div class="panel-solid mt-2">Reloj</div>
+        <div class="real-input">
+          <!-- aquí usaremos “duración” como minuto-base de slot; puedes cambiar por selector de hora si quieres -->
+          <input id="duracionInput" type="number" class="form-control" value="60" min="30" step="30">
+        </div>
+      </div>
+
+      <div class="col-lg-4 panel-right">
+        <div class="panel-btn">Seleccione Mesa <span class="tri"></span></div>
+        <div class="chip">
+          Mesa 1 <small>(4 comensales / interior / no fumadores)</small>
+        </div>
+        <div class="chip">
+          Mesa 2 <small>(6 comensales / patio / fumadores)</small>
+        </div>
+        <div class="real-input">
+          <!-- selector real (multi) para que el JS arme columnas) -->
+          <select id="mesasMulti" multiple class="form-select" size="4"></select>
+        </div>
+        <div class="d-grid mt-2">
+          <button id="buscarBtn" class="btn btn-primary fw-bold">Buscar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MATRIZ -->
+    <div class="board">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover" id="boardTable">
+          <thead>
+          <tr id="headRow">
+            <th>Horario</th>
+            <!-- Mesas N se agregarán por JS -->
+          </tr>
+          </thead>
+          <tbody id="bodyRows">
+          <!-- filas por JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tu JS que ya creaste y que arma la matriz -->
+  <script src="/js/disponibilidad.js"></script>
+</body>
+</html>
